@@ -257,5 +257,6 @@ ggplot(results_df, aes(x = Predicted, y = Actual)) +
 
 Chu Li(1092477): step 1&2
 Denis Lebedev (4826973): step 3 (code) + some cosmetic features for all sections
+Tinghui Xu (1715119):step 1&2 previous examples and corevises 
 
 # AI tools
