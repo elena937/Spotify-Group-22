@@ -1,6 +1,6 @@
 ---
 title: "Group Project: Spotify" 
-author: "Chu Li (1092477), Denis Lebedev (4826973)"
+author: "Chu Li (1092477), Denis Lebedev (4826973)，Tinghui Xu (1715119)"
 date: 2025
 output:
     prettydoc::html_pretty:
