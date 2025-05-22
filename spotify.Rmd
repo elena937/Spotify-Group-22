@@ -1,27 +1,40 @@
 ---
-title: "Spotify"
-author: "Chu LI"
-date: "2025-05-22"
-output: html_document
+title: "Group Project: Spotify" 
+author: "Chu Li (1092477), Denis Lebedev (4826973)"
+date: 2025
+output:
+    prettydoc::html_pretty:
+      theme: cayman
+      highlight: github
+      toc: true
+      number_sections: false
 ---
 
 ```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = TRUE)
+knitr::opts_chunk$set(
+  echo = FALSE,
+  message = FALSE,
+  warning = FALSE,
+  error = FALSE,
+  comment = NA
+)
+
+library(readr)
+library(ggplot2)
+library(dplyr)
+library(gridExtra)
+library(ISLR)
+library(glmnet)
+library(tidyverse)
+library(caret)
+library(corrplot)
 ```
 
-```{r}
-library(tidyr)
-library(dplyr)
-library(ggplot2)
-library(caret)
-library(glmnet)
-```
 
 ```{r}
 set.seed(123)
 Spotify <- read.csv("Spotify-2000.csv")
 colnames(Spotify)
-
 ```
 
 
@@ -51,6 +64,7 @@ spotify_data <- Spotify %>%
     Length = as.numeric(Length),
     Acousticness = as.numeric(Acousticness),
     Speechiness = as.numeric(Speechiness),
+    Liveness = as.numeric(Liveness),
     Popularity = as.numeric(Popularity),
     Year = as.numeric(Year)
   )
@@ -60,7 +74,7 @@ spotify_data <- Spotify %>%
 X-axis: represents the “Popularity Score”, which ranges from 0 to 100 on a scale of 25 (0, 25, 50, 75, 100).
 Y-axis: represents the “Count of Tracks”, ranging from 0 to 250 on a scale of 100.
 
-```{r plot-popularity-histogram}
+```{r plot-popularity-histogram, fig.align='center', fig.height=5, fig.width = 7}
 # Plot histogram of popularity
 ggplot(spotify_data, aes(x = Popularity)) +
   geom_histogram(binwidth = 5, fill = "darkgreen", color = "white", alpha = 0.8) +
@@ -84,7 +98,7 @@ X-axis: represents “Release Year”, which spans from 1960 to 2020, and is sca
 Y-axis: represents “Average Popularity”, which spans from 50 to 70 and is scaled in units of 10.
 We use a blue line to represent the average popularity of the tracks for each year, and a light blue shaded area around the line to represent the confidence interval, which shows the variability of the data. There is also a blue linear trend line running through the entire chart, reflecting the overall trend.
 
-```{r plot-popularity-year, warning=FALSE, message=FALSE}
+```{r plot-popularity-year, warning=FALSE, message=FALSE, fig.align='center', fig.height=5, fig.width = 7}
 # Plot average popularity by year with linear model
 spotify_data %>%
   group_by(Year) %>%
@@ -113,10 +127,7 @@ spotify_data %>%
   (c) The area above the diagonal is blank (only the lower triangle is displayed), which improves simplicity.
   (d) The heatmap will help us identify any strong correlations between features, which can be useful for feature selection in predictive modeling.
 
-```{r plot-correlation-heatmap}
-library(ggplot2)
-library(corrplot)   
-
+```{r plot-correlation-heatmap, fig.align='center', fig.height=5, fig.width = 7}
 # Select numeric variables
 num_data <- spotify_data %>%
   select(where(is.numeric))
@@ -128,7 +139,6 @@ cor_matrix <- cor(num_data, use = "complete.obs")
 corrplot(cor_matrix, method = "color", type = "lower", 
          tl.col = "black", tl.srt = 45, number.cex = 0.7,
          addCoef.col = "black", diag = FALSE)
-
 ```
 # Key observations:
   (a) Energy and Loudness have the highest correlation (0.74): music with high energy tends to be louder.
@@ -136,8 +146,116 @@ corrplot(cor_matrix, method = "color", type = "lower",
   (c) Popularity has weak correlations with other variables (the absolute value is basically < 0.2), indicating that popularity is affected by more complex factors and is not determined by these audio features alone.
 
 
+# (4) Linear Model: deviding the dataset into train, valid and test
 
-student’s contribution:
+```{r, fig.align='center', fig.height=5, fig.width = 7}
+#get rid of all NA values
+spotify_data <- na.omit(spotify_data)
+
+#creating train, test and valid datasets
+train_index <- createDataPartition(spotify_data$Popularity, p = 0.5, list = FALSE)
+df_train <- spotify_data[train_index, ]
+
+remaining <- spotify_data[-train_index, ]
+valid_index <- createDataPartition(remaining$Popularity, p = 0.6, list = FALSE)
+df_valid <- remaining[valid_index, ]
+
+df_test <- remaining[-valid_index, ]
+
+#graph to make sure of distribution
+df_train$Set <- "Train"
+df_valid$Set <- "Validation"
+df_test$Set <- "Test"
+
+combined <- bind_rows(df_train, df_valid, df_test)
+
+ggplot(combined, aes(x = Popularity, fill = Set)) +
+  geom_density(alpha = 0.4) +
+  theme_minimal()
+```
+
+# (5) Linear Model: choosing the best model based on MSE
+
+```{r}
+#some preparations: functions for formula generation and MSE calculation
+source("generate_formulas.R")
+
+lm_mse <- function(formula, train_data, valid_data) {
+  y_name <- as.character(formula)[2]
+  y_true <- valid_data[[y_name]]
+  
+  lm_fit <- lm(formula, train_data)
+  y_pred <- predict(lm_fit, newdata = valid_data)
+  
+  mean((y_true - y_pred)^2)
+}
+
+# identifying predictors
+df_pred <- spotify_data %>% select(-c("Title", "Artist", "Genre", "Popularity", "Index"))
+predictors <- colnames(df_pred)
+
+# assessing the best model
+top_formulas <- list()
+top_mses <- numeric()
+
+for (p in 1:length(predictors)) {
+  forms <- generate_formulas(p = p, x_vars = predictors, y_var = "Popularity")
+  mses <- rep(0, length(forms))
+
+  for (i in 1:length(forms)) {
+    mses[i] <- lm_mse(as.formula(forms[i]), df_train, df_valid)
+  }
+
+  top_formulas[[p]] <- forms[which.min(mses)]
+  top_mses[p] <- mses[which.min(mses)]
+}
+
+#print("Top formulas for each number of predictors")
+#top_formulas
+
+print(paste("Best overall formula based on MSE (MSE =", round(min(top_mses), digits = 2), ")"))
+best_model <- top_formulas[[which.min(top_mses)]]
+best_model
+```
+
+# (6) Linear Model: calculating test MSE
+
+```{r}
+#calculate test MSE
+mse <- function(actual, predicted) {
+  mean((actual - predicted)^2)
+}
+
+train_valid <- bind_rows(df_train, df_valid)
+best_model <- lm(best_model, data = train_valid)
+
+pred_test <- predict(best_model, newdata = df_test)
+test_mse <- mse(df_test$Popularity, pred_test)
+
+print(paste("Test MSE =", round(test_mse, digits = 2)))
+```
+
+# (7) Showing the results graphically
+
+```{r, fig.align='center', fig.height=5, fig.width = 7}
+results_df <- data.frame(
+  Actual = df_test$Popularity,
+  Predicted = pred_test
+)
+
+ggplot(results_df, aes(x = Predicted, y = Actual)) +
+  geom_point(alpha = 0.6, size = 2) +
+  geom_abline(slope = 1, intercept = 0, color = "red", size = 1) +
+  labs(title = "Predicted vs Actual Popularity",
+       x = "Predicted Popularity",
+       y = "Actual Popularity") +
+  theme_minimal() +
+  theme(plot.title = element_text(hjust = 0.5))
+```
+
+# student’s contribution:
+
 Chu Li(1092477): step 1&2
+Denis Lebedev (4826973): step 3 (code) + some cosmetic features for all sections
 
-AI tools
+# AI tools
