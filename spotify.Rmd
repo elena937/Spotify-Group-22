@@ -19,6 +19,125 @@ library(glmnet)
 
 ```{r}
 set.seed(123)
-Spotify <- read.csv("data/Spotify-2000.csv")
+Spotify <- read.csv("Spotify-2000.csv")
+colnames(Spotify)
+
 ```
 
+
+```{r data-cleaning, warning=FALSE, message=FALSE}
+str(Spotify) # check the structure of the dataset
+colSums(is.na(Spotify)) # check for missing values in the dataset.
+# The dataset has no missing values.
+
+# We then clean the dataset by renaming the columns for clarity and converting the relevant columns to numeric.
+# Check which columns are not clean numerics
+glimpse(Spotify)
+
+# Cleaned version (only mutate numeric columns that are truly numeric)
+spotify_data <- Spotify %>%
+  rename(
+    BPM = `Beats.Per.Minute..BPM.`,
+    Loudness = `Loudness..dB.`,
+    Genre = `Top.Genre`,
+    Length = `Length..Duration.`
+  ) %>%
+  mutate(
+    BPM = as.numeric(BPM),
+    Energy = as.numeric(Energy),
+    Danceability = as.numeric(Danceability),
+    Loudness = as.numeric(Loudness),
+    Valence = as.numeric(Valence),
+    Length = as.numeric(Length),
+    Acousticness = as.numeric(Acousticness),
+    Speechiness = as.numeric(Speechiness),
+    Popularity = as.numeric(Popularity),
+    Year = as.numeric(Year)
+  )
+```
+
+# (1) A green histogram showing the distribution of the number of tracks in different popularity ranges.
+X-axis: represents the “Popularity Score”, which ranges from 0 to 100 on a scale of 25 (0, 25, 50, 75, 100).
+Y-axis: represents the “Count of Tracks”, ranging from 0 to 250 on a scale of 100.
+
+```{r plot-popularity-histogram}
+# Plot histogram of popularity
+ggplot(spotify_data, aes(x = Popularity)) +
+  geom_histogram(binwidth = 5, fill = "darkgreen", color = "white", alpha = 0.8) +
+  labs(
+    title = "Distribution of Track Popularity",
+    x = "Popularity Score",
+    y = "Count of Tracks"
+  ) +
+  theme_minimal()
+
+```
+
+# Key observations:
+  (a) The distribution of the popularity scores is right skewed (positively skewed), i.e., the number of tracks with low popularity (0-25) is low, and the number of tracks with high popularity (75-100) is also low, with the majority of tracks clustered in the 50-75 range. This indicates a slight bimodal character (bimodal) to the distribution, with the main peak in the 60-75 range and the secondary peak in the 50-60 range.
+  (b) This suggests that most tracks have a concentration of moderate popularity, with fewer very high or very low popularity, reflecting the trend of concentration in music popularity.
+
+
+
+# (2) We decided to plot a line graph to represent the average annual track popularity.
+X-axis: represents “Release Year”, which spans from 1960 to 2020, and is scaled in 10-year increments (1960, 1980, 2000, 2020).
+Y-axis: represents “Average Popularity”, which spans from 50 to 70 and is scaled in units of 10.
+We use a blue line to represent the average popularity of the tracks for each year, and a light blue shaded area around the line to represent the confidence interval, which shows the variability of the data. There is also a blue linear trend line running through the entire chart, reflecting the overall trend.
+
+```{r plot-popularity-year, warning=FALSE, message=FALSE}
+# Plot average popularity by year with linear model
+spotify_data %>%
+  group_by(Year) %>%
+  summarise(Avg_Popularity = mean(Popularity, na.rm = TRUE)) %>%
+  ggplot(aes(x = Year, y = Avg_Popularity)) +
+  geom_line(color = "steelblue", size = 1) +
+  geom_smooth(method = "lm", color = "blue", fill = "lightblue", se = TRUE) + 
+  labs(
+    title = "Average Track Popularity Over Years",
+    x = "Release Year",
+    y = "Average Popularity"
+  ) +
+  theme_minimal()
+
+```
+# Key observations:
+  (a) From 1960 to 2020, average repertoire prevalence shows a general downward trend, dropping to a low around 2000, near 50. after 2000, the trend begins to stabilize and shows slight fluctuations and signs of increase between 2010 and 2020, with prevalence rising slightly back above 50 in 2020.
+  (b) Volatility: Prevalence fluctuates significantly between years. For example, there was a sharp peak in the early 1960s followed by a rapid decline; flatter fluctuations in the 1980s and 1990s; and several small increases and decreases in the late 2000s and early 2010s.
+  (c) Confidence intervals: The light blue shaded areas indicate confidence intervals for the mean prevalence, reflecting the variability and statistical reliability of the data. In the 1960s and 2020s, the confidence intervals are narrower, suggesting that the data are less variable in these years and that the data may have larger sample sizes or a more concentrated distribution of prevalence. In contrast, in the 1980s through the 2000s, the confidence intervals are slightly wider, indicating that the data are more variable, possibly due to increased differences in the popularity of different types of music.
+  (d) Trend line: The blue linear trend line shows that the long-term trend is downward, with a negative slope. This trend line was fitted by a linear regression model and shows that despite short-term fluctuations, overall average prevalence has declined by about 15-20 points over the past 60 years (from 67 to about 50).
+
+
+# (3) We decide to draw a heatmap to visualize the correlation between the numeric variables in the dataset. 
+  (a) Heatmaps use colors and numbers to indicate the linear correlation between variables, with values ranging from -1 to 1.
+  (b) The colors range from red (negative correlation) to blue (positive correlation), and the darker the color, the stronger the correlation.
+  (c) The area above the diagonal is blank (only the lower triangle is displayed), which improves simplicity.
+  (d) The heatmap will help us identify any strong correlations between features, which can be useful for feature selection in predictive modeling.
+
+```{r plot-correlation-heatmap}
+library(ggplot2)
+library(corrplot)   
+
+# Select numeric variables
+num_data <- spotify_data %>%
+  select(where(is.numeric))
+
+# Compute correlation matrix
+cor_matrix <- cor(num_data, use = "complete.obs")
+
+# Plot heatmap
+corrplot(cor_matrix, method = "color", type = "lower", 
+         tl.col = "black", tl.srt = 45, number.cex = 0.7,
+         addCoef.col = "black", diag = FALSE)
+
+```
+# Key observations:
+  (a) Energy and Loudness have the highest correlation (0.74): music with high energy tends to be louder.
+  (b) Acousticness and Energy have the strongest negative correlation (-0.67): music with high acoustics tends to have low energy (softer).
+  (c) Popularity has weak correlations with other variables (the absolute value is basically < 0.2), indicating that popularity is affected by more complex factors and is not determined by these audio features alone.
+
+
+
+student’s contribution:
+Chu Li(1092477): step 1&2
+
+AI tools
