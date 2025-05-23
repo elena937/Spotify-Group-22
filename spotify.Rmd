@@ -1,6 +1,6 @@
 ---
 title: "Group Project: Spotify" 
-author: "Chu Li (1092477), Denis Lebedev (4826973)，Tinghui Xu (1715119)"
+author: "Chu Li (1092477), Denis Lebedev (4826973)，Tinghui Xu (1715119), Eleni Spyrou (4515919)"
 date: 2025
 output:
     prettydoc::html_pretty:
@@ -147,6 +147,18 @@ corrplot(cor_matrix, method = "color", type = "lower",
 
 
 # (4) Linear Model: deviding the dataset into train, valid and test
+  (a)Firstly we got rid of all NA values by using the `na.omit` function.
+  (b)Then used the `createDataPartition` function to create an index for the distribution of the variable, `Popularity`.
+  (c)The division of the original is 50%, 30%, and 20% for the train, valid and test data frame respectively.
+  (d)To split the division we made four new objects:
+                                                 -   `df_train`, which corresponds to 50% of the variable,
+                                                 -   `remaining`, which is taking the remaining 50%, 
+                                                 -   `df_valid`, which uses 60% of `remaining`, and lastly
+                                                 -   `df_test`, which takes whatever is left from `df_valid`
+  (e)Then we graph each one by adding `Set` to each row identifying which dataset it belongs to.
+  (f)We combine the three sets into one data frame, using the function `bind_rows`, which is used to combine df vertically.
+  (g)Lastly we visualize the combined data frame using `ggplot2` with a density graph.
+
 
 ```{r, fig.align='center', fig.height=5, fig.width = 7}
 #get rid of all NA values
@@ -173,8 +185,26 @@ ggplot(combined, aes(x = Popularity, fill = Set)) +
   geom_density(alpha = 0.4) +
   theme_minimal()
 ```
+# Key Observations:
+  (a)X-axis: Popularity
+  (b)Y-axis: Density
+  (c)Overall the distribution of the three sets is overlapping very closely.
+  (d)This indicates that the model is ideally plotted and has no major distributional bias introduced during the split.
 
 # (5) Linear Model: choosing the best model based on MSE
+  (a)Firstly we generated some formula in R and sourced it to our Rmrd. 
+  (b)We defined the `lm_mse` function with `lm_mse <- function(formula, train_data, valid_data)`, which means that we will train the model using the training data, but predict it using the valid data. 
+  (c)Eventually, the formula we built will give us the mean of squared errors, which is the mean of the square of the difference between the true and predicted Y values. 
+  (d)When it comes to identifying predictors we deselected some from the data so we are left only with the ones that interest us. 
+  (e)To asses the best model, we want the model with the lowest mean square errors. 
+  (f)For this step we initially classed the object `top_formulas` as a list, and the object `top_mses` as numeric. 
+  (g)In order to move on with finding the best model we are using loops, where we evaluate all the models by numbers of  predictors. 
+  (h)We generated a formula, where a formula for every model is generated with regard to that model's predictors for popularity. 
+  (i)Then, we state that MSES can be repeated from 0 until the amount of formulas we have. 
+  (j)Following that, the MSES of a specific formula can be calculated through using the `lm_mses` formula from part 4. 
+  (k)Eventually we remade the two objects, `top_formula` and `top_mses`, where the outcome of `top_formula` corresponds to the formula with the lowest MSES and the output of `top_mses` will be the actual best MSES. 
+  (l)For the final step, we want the output of our code to be written in a sentence, so we formulate a sentence, where we replace the MSES with the number corresponding to the `top_mses` rounded to 2 decimal places. 
+  (m)Other than the sentence we also add the linear formula of the model, consisting of the independent variable and its  predictors.
 
 ```{r}
 #some preparations: functions for formula generation and MSE calculation
@@ -217,8 +247,17 @@ print(paste("Best overall formula based on MSE (MSE =", round(min(top_mses), dig
 best_model <- top_formulas[[which.min(top_mses)]]
 best_model
 ```
+# Key Observations:
+  (a)What we can clearly see is that the best model is the one with more than 2 predictors.
+  (b)This outlines that the more the predictors, the smaller the mean square error, the less the bias, and the better the model.
 
 # (6) Linear Model: calculating test MSE
+  (a)We start of by setting a function for MSE, which is the mean of the difference between the actual and predicted  values squared.
+  (b)Then we combine the train data and valid data vertically into a new variable called `train_valid`
+  (c)Following that we make an object `best_model`, featuring the linear model of the best model function from the last  part, but now trained on the training and validation sets.
+  (d)We then use the test set to predict the best model.
+  (e)Lastly we test the MSE, with a model trained on the train and valid data set, but predicted on the test data set.
+  (f)We formulate our output into a phrase indicating the value of the MSE to 2 decimal places.
 
 ```{r}
 #calculate test MSE
@@ -234,8 +273,19 @@ test_mse <- mse(df_test$Popularity, pred_test)
 
 print(paste("Test MSE =", round(test_mse, digits = 2)))
 ```
+# Key Observations:
+  (a)Our MSE when using this formula differs. In this part we used all the available information that we had and the  return was better.
+  (b)Now instead of 191.31, the MSE is 174.39, which is lower and improved.
+  (c)This shows that when using also the test data other than the valid and train data, the formula is operating better.
 
 # (7) Showing the results graphically
+  (a)In order to graph our results we started off, by making a data frame of the actual and predicted results called  `results_df`
+  (b)We then used `ggplot2` again to visualize the data in a scatter plot, and decided on using `alpha = 0.6` for less  overlapping.
+  X-axis: Predicted values
+  Y-axis: Actual values
+  (c)Furthermore, we added a diagonal line, showing when predicted=actual, using the function `geom_abline`.
+  (d)We added colour to the line, title to the graph, labels to the axis, and a theme.
+  (e)To finish it up we made some justifications to the title in terms of position.
 
 ```{r, fig.align='center', fig.height=5, fig.width = 7}
 results_df <- data.frame(
@@ -252,11 +302,18 @@ ggplot(results_df, aes(x = Predicted, y = Actual)) +
   theme_minimal() +
   theme(plot.title = element_text(hjust = 0.5))
 ```
+# Key Observations:
+  (a)The points are widely spread among the values showing not very strong accuracy.
+  (b)There is no much overlapping though, and there are a fee point on the line indicating equivalence of predicted and  actual.
+  (c)Most predicted values cluster at the values 50-65, even though actual values do at 25-80.
+  (d)There is some bias between the two and a tendency to regress towards the mean.
+
 
 # student’s contribution:
 
 Chu Li(1092477): step 1&2
 Denis Lebedev (4826973): step 3 (code) + some cosmetic features for all sections
 Tinghui Xu (1715119):step 1&2 previous examples and revises 
+Eleni Spyrou (4515919): step 3&4
 
 # AI tools
