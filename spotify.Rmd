@@ -1,6 +1,6 @@
 ---
 title: "Group Project: Spotify" 
-author: "Chu Li (1092477), Denis Lebedev (4826973)，Tinghui Xu (1715119)"
+author: "Chu Li (1082477), Denis Lebedev (4826973)，Tinghui Xu (1715119), Eleni Spyrou(4515919)"
 date: 2025
 output:
     prettydoc::html_pretty:
@@ -69,6 +69,13 @@ spotify_data <- Spotify %>%
     Year = as.numeric(Year)
   )
 ```
+
+## Research question:
+Which audio features best explain the difference in popularity of Spotify music from 1956 to 2019, based on the top 2000 tracks?
+
+## Motivation:
+In the age of streaming, music popularity is no longer accidental, but can be quantified and analyzed.The Spotify dataset(https://www.kaggle.com/datasets/iamsumat/spotify-top-2000s-mega-dataset) provides audio features including energy, danceability, positive emotions, and more.This study examines the 2,000 most popular songs between 1956 and 2019 to analyze which of these features best explain differences in song popularity and to better understand listener preferences in the context of Historical Changes.
+
 
 # (1) A green histogram showing the distribution of the number of tracks in different popularity ranges.
 X-axis: represents the “Popularity Score”, which ranges from 0 to 100 on a scale of 25 (0, 25, 50, 75, 100).
@@ -255,8 +262,10 @@ ggplot(results_df, aes(x = Predicted, y = Actual)) +
 
 # student’s contribution:
 
-Chu Li(1092477): step 1&2
+Chu Li(1082477): step 1&2(code+descriptive interpretation), creating GitHub repository
 Denis Lebedev (4826973): step 3 (code) + some cosmetic features for all sections
 Tinghui Xu (1715119):step 1&2 previous examples and revises 
-
+Eleni Spyrou(4515919): step 3&4 (code) + descriptive interpretation
 # AI tools
+
+Using ChatGPT to get inspiration for analyzing ideas
