@@ -5,6 +5,27 @@ library(dplyr)
 library(caret)
 
 spotify_data <- read.csv("Spotify-2000.csv")
+spotify_data <- spotify_data %>%
+  rename(
+    BPM = `Beats.Per.Minute..BPM.`,
+    Loudness = `Loudness..dB.`,
+    Genre = `Top.Genre`,
+    Length = `Length..Duration.`
+  ) %>%
+  mutate(
+    BPM = as.numeric(BPM),
+    Energy = as.numeric(Energy),
+    Danceability = as.numeric(Danceability),
+    Loudness = as.numeric(Loudness),
+    Valence = as.numeric(Valence),
+    Length = as.numeric(Length),
+    Acousticness = as.numeric(Acousticness),
+    Speechiness = as.numeric(Speechiness),
+    Liveness = as.numeric(Liveness),
+    Popularity = as.numeric(Popularity),
+    Year = as.numeric(Year)
+  )
+spotify_data <- na.omit(spotify_data)
 
 shinyServer(function(input, output) {
   
