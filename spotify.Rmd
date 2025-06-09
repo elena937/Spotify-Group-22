@@ -324,3 +324,98 @@ Eleni Spyrou(4515919): step 3&4 (descriptive interpretation)
 # AI tools
 
 Using ChatGPT to get inspiration for analyzing ideas
+
+
+
+## After Feedback
+
+```{r}
+# Display the MSE value of the best model and the formula
+best_index <- which.min(top_mses)
+best_formula <- top_formulas[[best_index]]
+best_mse <- top_mses[best_index]
+
+print(best_formula)
+print(best_mse)
+
+```
+
+```{r}
+# Evaluate the performance of the final model on the test set:
+final_model <- lm(best_formula, data = df_train)
+predictions <- predict(final_model, newdata = df_test)
+test_mse <- mean((df_test$Popularity - predictions)^2)
+
+print(test_mse)
+
+```
+```{r}
+# We want to know which variables have significant predictive power in the final model.
+summary(final_model)
+
+```
+```{r}
+library(leaps)
+library(caret)
+library(ggplot2)
+
+set.seed(123)
+
+# Only retain numerical predictor variables used for modeling.
+model_data <- spotify_data[, c("Popularity", "Year", "Energy", "Loudness", 
+                               "Liveness", "Length", "Acousticness", "Speechiness")]
+
+predictor_names <- setdiff(names(model_data), "Popularity")
+
+# Create a function to cross-validate the MSE of the best model for each subset (1 to 7 variables). 
+# We will use k-fold cross-validation to estimate the out-of-sample MSE.
+k_folds <- 5
+folds <- createFolds(model_data$Popularity, k = k_folds)
+
+max_vars <- length(predictor_names)
+cv_errors <- rep(NA, max_vars)
+
+for (k in 1:max_vars) {
+  fold_mse <- c()
+  
+  for (i in 1:k_folds) {
+    train_data <- model_data[-folds[[i]], ]
+    test_data <- model_data[folds[[i]], ]
+    
+    # Find the best k variable model on the training set.
+    regfit <- regsubsets(Popularity ~ ., data = train_data, nvmax = max_vars)
+    coefi <- coef(regfit, id = k)
+    vars_in_model <- names(coefi)[-1]  # Remove the intercept term
+    
+    # Model prediction using selected variables
+    formula_str <- paste("Popularity ~", paste(vars_in_model, collapse = " + "))
+    model <- lm(as.formula(formula_str), data = train_data)
+    preds <- predict(model, newdata = test_data)
+    
+    mse <- mean((test_data$Popularity - preds)^2, na.rm = TRUE)
+    fold_mse <- c(fold_mse, mse)
+  }
+  
+  cv_errors[k] <- mean(fold_mse)
+}
+
+# Construct results data.frame
+model_mse_df <- data.frame(num_vars = 1:max_vars, mse = cv_errors)
+
+print(model_mse_df)
+
+
+ggplot(model_mse_df, aes(x = num_vars, y = mse)) +
+  geom_line(color = "blue", size = 1) +
+  geom_point(size = 2, color = "darkred") +
+  geom_vline(xintercept = 7, linetype = "dashed", color = "darkgreen") +
+  labs(
+    title = "Relationship between the number of predictor variables and the out-of-sample MSE of the model",
+    x = "Number of predictor variables (k)",
+    y = "Out-of-sample MSE"
+  ) +
+  theme_minimal()
+
+```
+
+# As the number of variables increases, the predictive power of the model increases, so we use a model with seven predictor variables.
