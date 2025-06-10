@@ -394,6 +394,42 @@ tibble(Predicted = y_pred, Observed = df_valid_new$Popularity) %>%
 mse(df_valid_new$Popularity, y_pred)
 ```
 
+## Interpretation of the LASSO Model
+
+LASSO (Least Absolute Shrinkage and Selection Operator) regression is a regularized linear modeling technique that adds an L1 penalty to the loss function. This has the effect of shrinking some coefficients to exactly zero, effectively performing variable selection and simplifying the model.
+
+In our analysis, we used 10-fold cross-validation to determine the optimal lambda (penalty) value that minimizes the mean squared error (MSE) on the validation set. The resulting model retained only a subset of predictor variables with non-zero coefficients—most notably variables such as `Year`, `Energy`, `Danceability`, `Acousticness`, and `Speechiness`. These variables therefore contribute the most to explaining differences in track popularity, while others were eliminated due to weaker associations.
+
+The validation performance of the LASSO model was evaluated using MSE, and a scatter plot was generated comparing predicted versus actual popularity scores. The distribution of points showed moderate alignment with the diagonal (ideal fit line), though some bias toward the mean was observed—common in regularized models that penalize extreme coefficients.
+
+Overall, LASSO provides a more interpretable model by reducing complexity, while maintaining reasonable predictive performance.
+
+## Comparison of LASSO and Linear Regression with Best Subset Selection
+
+We applied and compared two linear modeling approaches:
+
+1. **Ordinary Linear Regression with Best Subset Selection**  
+   This method exhaustively evaluates all possible combinations of predictor variables and selects the model with the lowest validation MSE.
+
+2. **LASSO Regression**  
+   This method applies a penalty term to shrink less relevant variables and automatically excludes them from the model.
+
+### Key Differences:
+
+- **Feature Selection Strategy**:  
+  Best subset selection searches all combinations explicitly, which can become computationally intensive as the number of variables increases. LASSO, on the other hand, integrates selection within the estimation process by shrinking coefficients.
+
+- **Model Interpretability**:  
+  LASSO produces a sparse model with fewer predictors, improving interpretability. Best subset selection may retain more variables and result in a more complex model.
+
+- **Predictive Accuracy**:  
+  In our study, the final linear model selected via best subset selection achieved a lower test MSE (~174.39) compared to the LASSO model. However, the difference in performance was not substantial, and LASSO had the advantage of automatically reducing overfitting by excluding irrelevant variables.
+
+### Conclusion:
+
+While best subset linear regression performed slightly better in terms of test MSE, LASSO regression provided a more concise and interpretable model with comparable accuracy. The choice between these two methods depends on the trade-off between model simplicity and predictive performance.
+
+
 # student’s contribution:
 
 Chu Li(1082477): step 1&2(code+descriptive interpretation), creating GitHub repository
