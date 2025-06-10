@@ -1,4 +1,10 @@
 library(shiny)
+library(ggplot2)
+library(dplyr)
+library(corrplot)
+library(caret)
+library(readr)
+library(tidyverse)
 
 spotify_data <- read.csv("Spotify-2000.csv") %>%
   dplyr::rename(
