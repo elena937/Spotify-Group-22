@@ -1,0 +1,472 @@
+---
+title: "Group Project: Spotify" 
+author: "Chu Li (1082477), Denis Lebedev (4826973)，Tinghui Xu (1715119), Eleni Spyrou(4515919)"
+date: 2025
+output:
+    prettydoc::html_pretty:
+      theme: cayman
+      highlight: github
+      toc: true
+      number_sections: false
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(
+  echo = TRUE,
+  message = FALSE,
+  warning = FALSE,
+  error = FALSE,
+  comment = NA
+)
+
+library(readr)
+library(ggplot2)
+library(dplyr)
+library(gridExtra)
+library(ISLR)
+library(glmnet)
+library(tidyverse)
+library(caret)
+library(corrplot)
+```
+
+
+# Set seed and Data cleanup
+
+```{r}
+set.seed(123)
+Spotify <- read.csv("Spotify-2000.csv")
+colnames(Spotify)
+```
+
+
+```{r data-cleaning, warning=FALSE, message=FALSE}
+str(Spotify) # check the structure of the dataset
+colSums(is.na(Spotify)) # check for missing values in the dataset.
+# The dataset has no missing values.
+
+# We then clean the dataset by renaming the columns for clarity and converting the relevant columns to numeric.
+# Check which columns are not clean numerics
+glimpse(Spotify)
+
+# Cleaned version (only mutate numeric columns that are truly numeric)
+spotify_data <- Spotify %>%
+  rename(
+    BPM = `Beats.Per.Minute..BPM.`,
+    Loudness = `Loudness..dB.`,
+    Genre = `Top.Genre`,
+    Length = `Length..Duration.`
+  ) %>%
+  mutate(
+    BPM = as.numeric(BPM),
+    Energy = as.numeric(Energy),
+    Danceability = as.numeric(Danceability),
+    Loudness = as.numeric(Loudness),
+    Valence = as.numeric(Valence),
+    Length = as.numeric(Length),
+    Acousticness = as.numeric(Acousticness),
+    Speechiness = as.numeric(Speechiness),
+    Liveness = as.numeric(Liveness),
+    Popularity = as.numeric(Popularity),
+    Year = as.numeric(Year)
+  )
+```
+# Intoduction
+
+## Research question:
+Which audio features best explain the difference in popularity of Spotify music from 1956 to 2019, based on the top 2000 tracks?
+
+## Motivation:
+In the age of streaming, music popularity is no longer accidental, but can be quantified and analyzed.The Spotify dataset(https://www.kaggle.com/datasets/iamsumat/spotify-top-2000s-mega-dataset) provides audio features including energy, danceability, positive emotions, and more.This study examines the 2,000 most popular songs between 1956 and 2019 to analyze which of these features best explain differences in song popularity and to better understand listener preferences in the context of Historical Changes.
+
+
+# (1) Distribution of the number of tracks in different popularity ranges
+X-axis: represents the “Popularity Score”, which ranges from 0 to 100 on a scale of 25 (0, 25, 50, 75, 100).
+Y-axis: represents the “Count of Tracks”, ranging from 0 to 250 on a scale of 100.
+
+```{r plot-popularity-histogram, fig.align='center', fig.height=5, fig.width = 7}
+# Plot histogram of popularity
+ggplot(spotify_data, aes(x = Popularity)) +
+  geom_histogram(binwidth = 5, fill = "darkgreen", color = "white", alpha = 0.8) +
+  labs(
+    title = "Distribution of Track Popularity",
+    x = "Popularity Score",
+    y = "Count of Tracks"
+  ) +
+  theme_minimal()
+
+```
+
+# Key observations:
+  (a) The distribution of the popularity scores is right skewed (positively skewed), i.e., the number of tracks with low popularity (0-25) is low, and the number of tracks with high popularity (75-100) is also low, with the majority of tracks clustered in the 50-75 range. This indicates a slight bimodal character (bimodal) to the distribution, with the main peak in the 60-75 range and the secondary peak in the 50-60 range.
+  (b) This suggests that most tracks have a concentration of moderate popularity, with fewer very high or very low popularity, reflecting the trend of concentration in music popularity.
+
+
+# (2) We decided to plot a line graph to represent the average annual track popularity.
+X-axis: represents “Release Year”, which spans from 1960 to 2020, and is scaled in 10-year increments (1960, 1980, 2000, 2020).
+Y-axis: represents “Average Popularity”, which spans from 50 to 70 and is scaled in units of 10.
+We use a blue line to represent the average popularity of the tracks for each year, and a light blue shaded area around the line to represent the confidence interval, which shows the variability of the data. There is also a blue linear trend line running through the entire chart, reflecting the overall trend.
+
+```{r plot-popularity-year, warning=FALSE, message=FALSE, fig.align='center', fig.height=5, fig.width = 7}
+# Plot average popularity by year with linear model
+spotify_data %>%
+  group_by(Year) %>%
+  summarise(Avg_Popularity = mean(Popularity, na.rm = TRUE)) %>%
+  ggplot(aes(x = Year, y = Avg_Popularity)) +
+  geom_line(color = "steelblue", size = 1) +
+  geom_smooth(method = "lm", color = "blue", fill = "lightblue", se = TRUE) + 
+  labs(
+    title = "Average Track Popularity Over Years",
+    x = "Release Year",
+    y = "Average Popularity"
+  ) +
+  theme_minimal()
+
+```
+
+**Key observations**
+  (a) From 1960 to 2020, average repertoire prevalence shows a general downward trend, dropping to a low around 2000, near 50. after 2000, the trend begins to stabilize and shows slight fluctuations and signs of increase between 2010 and 2020, with prevalence rising slightly back above 50 in 2020.
+  (b) Volatility: Prevalence fluctuates significantly between years. For example, there was a sharp peak in the early 1960s followed by a rapid decline; flatter fluctuations in the 1980s and 1990s; and several small increases and decreases in the late 2000s and early 2010s.
+  (c) Confidence intervals: The light blue shaded areas indicate confidence intervals for the mean prevalence, reflecting the variability and statistical reliability of the data. In the 1960s and 2020s, the confidence intervals are narrower, suggesting that the data are less variable in these years and that the data may have larger sample sizes or a more concentrated distribution of prevalence. In contrast, in the 1980s through the 2000s, the confidence intervals are slightly wider, indicating that the data are more variable, possibly due to increased differences in the popularity of different types of music.
+  (d) Trend line: The blue linear trend line shows that the long-term trend is downward, with a negative slope. This trend line was fitted by a linear regression model and shows that despite short-term fluctuations, overall average prevalence has declined by about 15-20 points over the past 60 years (from 67 to about 50).
+
+
+# (3) Variable correlation heatmap 
+  (a) Heatmaps use colors and numbers to indicate the linear correlation between variables, with values ranging from -1 to 1.
+  (b) The colors range from red (negative correlation) to blue (positive correlation), and the darker the color, the stronger the correlation.
+  (c) The area above the diagonal is blank (only the lower triangle is displayed), which improves simplicity.
+  (d) The heatmap will help us identify any strong correlations between features, which can be useful for feature selection in predictive modeling.
+
+```{r plot-correlation-heatmap, fig.align='center', fig.height=5, fig.width = 7}
+num_data <- spotify_data %>%
+  select(where(is.numeric))
+
+cor_matrix <- cor(num_data, use = "complete.obs")
+
+corrplot(cor_matrix, method = "color", type = "lower", 
+         tl.col = "black", tl.srt = 45, number.cex = 0.7,
+         addCoef.col = "black", diag = FALSE)
+```
+
+**Key observations**
+  (a) Energy and Loudness have the highest correlation (0.74): music with high energy tends to be louder.
+  (b) Acousticness and Energy have the strongest negative correlation (-0.67): music with high acoustics tends to have low energy (softer).
+  (c) Popularity has weak correlations with other variables (the absolute value is basically < 0.2), indicating that popularity is affected by more complex factors and is not determined by these audio features alone.
+
+
+# (4) Linear Model
+
+## Best subset method
+
+### Dividing into train, valid, and test
+
+  (a)Firstly we got rid of all NA values by using the `na.omit` function.
+  (b)Then used the `createDataPartition` function to create an index for the distribution of the variable, `Popularity`.
+  (c)The division of the original is 50%, 30%, and 20% for the train, valid and test data frame respectively.
+  (d)To split the division we made four new objects:
+                                                 -   `df_train`, which corresponds to 50% of the variable,
+                                                 -   `remaining`, which is taking the remaining 50%, 
+                                                 -   `df_valid`, which uses 60% of `remaining`, and lastly
+                                                 -   `df_test`, which takes whatever is left from `df_valid`
+  (e)Then we graph each one by adding `Set` to each row identifying which dataset it belongs to.
+  (f)We combine the three sets into one data frame, using the function `bind_rows`, which is used to combine df vertically.
+  (g)Lastly we visualize the combined data frame using `ggplot2` with a density graph.
+
+
+```{r, fig.align='center', fig.height=5, fig.width = 7}
+#get rid of all NA values
+spotify_data <- na.omit(spotify_data)
+
+#creating train, test and valid datasets
+train_index <- createDataPartition(spotify_data$Popularity, p = 0.5, list = FALSE)
+df_train <- spotify_data[train_index, ]
+
+remaining <- spotify_data[-train_index, ]
+valid_index <- createDataPartition(remaining$Popularity, p = 0.6, list = FALSE)
+df_valid <- remaining[valid_index, ]
+
+df_test <- remaining[-valid_index, ]
+
+#graph to make sure of distribution
+df_train$Set <- "Train"
+df_valid$Set <- "Validation"
+df_test$Set <- "Test"
+
+combined <- bind_rows(df_train, df_valid, df_test)
+
+ggplot(combined, aes(x = Popularity, fill = Set)) +
+  geom_density(alpha = 0.4) +
+  theme_minimal()
+```
+
+**Key Observations**
+  (a)X-axis: Popularity
+  (b)Y-axis: Density
+  (c)Overall the distribution of the three sets is overlapping very closely.
+  (d)This indicates that the model is ideally plotted and has no major distributional bias introduced during the split.
+
+### Choosing the best model based on MSE
+
+  (a)Firstly we generated some formula in R and sourced it to our Rmrd. 
+  (b)We defined the `lm_mse` function with `lm_mse <- function(formula, train_data, valid_data)`, which means that we will train the model using the training data, but predict it using the valid data. 
+  (c)Eventually, the formula we built will give us the mean of squared errors, which is the mean of the square of the difference between the true and predicted Y values. 
+  (d)When it comes to identifying predictors we deselected some from the data so we are left only with the ones that interest us. 
+  (e)To asses the best model, we want the model with the lowest mean square errors. 
+  (f)For this step we initially classed the object `top_formulas` as a list, and the object `top_mses` as numeric. 
+  (g)In order to move on with finding the best model we are using loops, where we evaluate all the models by numbers of  predictors. 
+  (h)We generated a formula, where a formula for every model is generated with regard to that model's predictors for popularity. 
+  (i)Then, we state that MSES can be repeated from 0 until the amount of formulas we have. 
+  (j)Following that, the MSES of a specific formula can be calculated through using the `lm_mses` formula from part 4. 
+  (k)Eventually we remade the two objects, `top_formula` and `top_mses`, where the outcome of `top_formula` corresponds to the formula with the lowest MSES and the output of `top_mses` will be the actual best MSES. 
+  (l)For the final step, we want the output of our code to be written in a sentence, so we formulate a sentence, where we replace the MSES with the number corresponding to the `top_mses` rounded to 2 decimal places. 
+  (m)Other than the sentence we also add the linear formula of the model, consisting of the independent variable and its  predictors.
+
+```{r}
+#some preparations: functions for formula generation and MSE calculation
+source("generate_formulas.R")
+
+lm_mse <- function(formula, train_data, valid_data) {
+  y_name <- as.character(formula)[2]
+  y_true <- valid_data[[y_name]]
+  
+  lm_fit <- lm(formula, train_data)
+  y_pred <- predict(lm_fit, newdata = valid_data)
+  
+  mean((y_true - y_pred)^2)
+}
+
+# identifying predictors
+df_pred <- spotify_data %>% select(-c("Title", "Artist", "Genre", "Popularity", "Index"))
+predictors <- colnames(df_pred)
+
+# assessing the best model
+top_formulas <- list()
+top_mses <- numeric()
+
+for (p in 1:length(predictors)) {
+  forms <- generate_formulas(p = p, x_vars = predictors, y_var = "Popularity")
+  mses <- rep(0, length(forms))
+
+  for (i in 1:length(forms)) {
+    mses[i] <- lm_mse(as.formula(forms[i]), df_train, df_valid)
+  }
+
+  top_formulas[[p]] <- forms[which.min(mses)]
+  top_mses[p] <- mses[which.min(mses)]
+}
+
+#print("Top formulas for each number of predictors")
+#top_formulas
+
+print(paste("Best overall formula based on MSE (MSE =", round(min(top_mses), digits = 2), ")"))
+best_model <- top_formulas[[which.min(top_mses)]]
+print(best_model)
+
+final_model <- lm(best_model, data = df_train)
+summary(final_model)
+```
+
+**Key Observations**
+  (a)What we can clearly see is that the best model is the one with more than 2 predictors.
+  (b)This model includes the variables "Year", "Energy", "Danceability", " Loudness", "Liveness", "Acousticness", and "Speechiness" to predict the popularity of music on Spotify.
+  (c)This outlines that the more the predictors, the smaller the mean square error, the less the bias, and the better the model.
+  (d)Although, here we are not using all available predictors. We didn't include "Title", "Artist", "Genre", "Popularity", and "Index", because the first three are not numeric characters, popularity is the variable that we are already testing and index doesn't illustrate any relationship towards popularity.
+  
+### Graphic interpretation of Best Subset Selection
+
+```{r, fig.align='center', fig.height=5, fig.width = 7}
+lm_mse <- function(formula, train_data, valid_data) {
+  model <- lm(formula, data = train_data)
+  preds <- predict(model, newdata = valid_data)
+  mean((valid_data$Popularity - preds)^2)
+}
+
+top_formulas <- list()
+top_mses <- numeric()
+
+for (p in 1:length(predictors)) {
+  formulas <- generate_formulas(p, x_vars = predictors, y_var = "Popularity")
+  mses <- sapply(formulas, function(f) {
+    lm_mse(as.formula(f), df_train, df_valid)
+  })
+  top_formulas[[p]] <- formulas[which.min(mses)]
+  top_mses[p] <- min(mses)
+}
+
+best_index <- which.min(top_mses)
+
+df_mse <- data.frame(NumPredictors = 1:length(predictors), MSE = top_mses)
+
+ggplot(df_mse, aes(x = NumPredictors, y = MSE)) +
+  geom_line(color = "blue", size = 1) +
+  geom_point(size = 2, color = "darkred") +
+  geom_vline(xintercept = best_index, linetype = "dashed", color = "darkgreen") +
+  scale_x_continuous(breaks = 1:length(predictors)) +
+  labs(title = "Validation MSE vs. Number of Predictors",
+       x = "Number of Predictors",
+       y = "Validation MSE") +
+  theme_minimal()
+```
+# As the number of variables increases, the predictive power of the model increases, so we use a model with seven predictor variables.
+
+### Calculating test MSE
+  (a)We start of by setting a function for MSE, which is the mean of the difference between the actual and predicted  values squared.
+  (b)Then we combine the train data and valid data vertically into a new variable called `train_valid`
+  (c)Following that we make an object `best_model`, featuring the linear model of the best model function from the last  part, but now trained on the training and validation sets.
+  (d)We then use the test set to predict the best model.
+  (e)Lastly we test the MSE, with a model trained on the train and valid data set, but predicted on the test data set.
+  (f)We formulate our output into a phrase indicating the value of the MSE to 2 decimal places.
+
+```{r}
+#calculate test MSE
+mse <- function(actual, predicted) {
+  mean((actual - predicted)^2)
+}
+
+train_valid <- bind_rows(df_train, df_valid)
+best_model <- lm(best_model, data = train_valid)
+
+pred_test <- predict(best_model, newdata = df_test)
+test_mse <- mse(df_test$Popularity, pred_test)
+
+print(paste("Test MSE =", round(test_mse, digits = 2)))
+```
+
+**Key Observations**
+  (a)Our MSE when using this formula differs. In this part we used all the available information that we had and the  return was better.
+  (b)Now instead of 191.31, the MSE is 174.39, which is lower and improved.
+  (c)This shows that when using also the test data other than the valid and train data, the formula is operating better.
+
+### Showing the results graphically
+  (a)In order to graph our results we started off, by making a data frame of the actual and predicted results called  `results_df`
+  (b)We then used `ggplot2` again to visualize the data in a scatter plot, and decided on using `alpha = 0.6` for less  overlapping.
+  X-axis: Predicted values
+  Y-axis: Actual values
+  (c)Furthermore, we added a diagonal line, showing when predicted=actual, using the function `geom_abline`.
+  (d)We added colour to the line, title to the graph, labels to the axis, and a theme.
+  (e)To finish it up we made some justifications to the title in terms of position.
+
+```{r, fig.align='center', fig.height=5, fig.width = 7}
+results_df <- data.frame(
+  Actual = df_test$Popularity,
+  Predicted = pred_test
+)
+
+ggplot(results_df, aes(x = Predicted, y = Actual)) +
+  geom_point(alpha = 0.6, size = 2) +
+  geom_abline(slope = 1, intercept = 0, color = "red", size = 1) +
+  labs(title = "Predicted vs Actual Popularity",
+       x = "Predicted Popularity",
+       y = "Actual Popularity") +
+  theme_minimal() +
+  theme(plot.title = element_text(hjust = 0.5))
+```
+
+**Key Observations**
+  (a)The points are widely spread among the values showing not very strong accuracy.
+  (b)There is no much overlapping though, and there are a fee point on the line indicating equivalence of predicted and  actual.
+  (c)Most predicted values cluster at the values 50-65, even though actual values do at 25-80.
+  (d)There is some bias between the two and a tendency to regress towards the mean.
+
+## Lasso method
+
+```{r}
+df_train_new <- df_train %>% 
+  select(-Set,-Title,-Artist,-Genre, -Index)
+x_train <- model.matrix(Popularity ~ .,data = df_train_new)
+```
+
+
+```{r}
+cv_lasso <- cv.glmnet(x = x_train[, -1], 
+                      y = df_train$Popularity, 
+                      family = "gaussian", 
+                      nfolds = 10)
+
+best_lambda <- cv_lasso$lambda.min
+best_lambda
+```
+
+```{r}
+plot(cv_lasso)
+```
+
+```{r}
+lasso_outcome <- glmnet(x = x_train[, -1],
+                        y = df_train_new$Popularity,
+                        family = "gaussian",
+                        alpha = 1,
+                        lambda = best_lambda
+                        )
+
+rownames(coef(lasso_outcome))[which(coef(lasso_outcome) != 0)]
+coef(lasso_outcome)
+```
+
+```{r}
+df_valid_new <- df_valid %>% 
+  select(-Set,-Title,-Artist,-Genre, -Index)
+
+x_valid <- model.matrix(Popularity ~ ., data = df_valid_new)[, -1]
+y_pred <- as.numeric(predict(lasso_outcome, newx = x_valid))
+
+tibble(Predicted = y_pred, Observed = df_valid_new$Popularity) %>% 
+  ggplot(aes(x = Predicted, y = Observed)) +
+  geom_point(alpha = 0.6, size = 2) +
+  geom_abline(slope = 1, intercept = 0, color = "red", size = 1) +
+  labs(title = "Predicted vs Actual Popularity",
+       x = "Predicted Popularity",
+       y = "Actual Popularity") +
+  theme_minimal() +
+  theme(plot.title = element_text(hjust = 0.5))
+```
+
+```{r}
+mse(df_valid_new$Popularity, y_pred)
+```
+
+## Interpretation of the LASSO Model
+
+LASSO (Least Absolute Shrinkage and Selection Operator) regression is a regularized linear modeling technique that adds an L1 penalty to the loss function. This has the effect of shrinking some coefficients to exactly zero, effectively performing variable selection and simplifying the model.
+
+In our analysis, we used 10-fold cross-validation to determine the optimal lambda (penalty) value that minimizes the mean squared error (MSE) on the validation set. The resulting model retained only a subset of predictor variables with non-zero coefficients—most notably variables such as `Year`, `Energy`, `Danceability`, `Acousticness`, and `Speechiness`. These variables therefore contribute the most to explaining differences in track popularity, while others were eliminated due to weaker associations.
+
+The validation performance of the LASSO model was evaluated using MSE, and a scatter plot was generated comparing predicted versus actual popularity scores. The distribution of points showed moderate alignment with the diagonal (ideal fit line), though some bias toward the mean was observed—common in regularized models that penalize extreme coefficients.
+
+Overall, LASSO provides a more interpretable model by reducing complexity, while maintaining reasonable predictive performance.
+
+## Comparison of LASSO and Linear Regression with Best Subset Selection
+
+We applied and compared two linear modeling approaches:
+
+1. **Ordinary Linear Regression with Best Subset Selection**  
+   This method exhaustively evaluates all possible combinations of predictor variables and selects the model with the lowest validation MSE.
+
+2. **LASSO Regression**  
+   This method applies a penalty term to shrink less relevant variables and automatically excludes them from the model.
+
+### Key Differences:
+
+- **Feature Selection Strategy**:  
+  Best subset selection searches all combinations explicitly, which can become computationally intensive as the number of variables increases. LASSO, on the other hand, integrates selection within the estimation process by shrinking coefficients.
+
+- **Model Interpretability**:  
+  LASSO produces a sparse model with fewer predictors, improving interpretability. Best subset selection may retain more variables and result in a more complex model.
+
+- **Predictive Accuracy**:  
+  In our study, the final linear model selected via best subset selection achieved a lower test MSE (~174.39) compared to the LASSO model. However, the difference in performance was not substantial, and LASSO had the advantage of automatically reducing overfitting by excluding irrelevant variables.
+
+### Conclusion:
+
+While best subset linear regression performed slightly better in terms of test MSE, LASSO regression provided a more concise and interpretable model with comparable accuracy. The choice between these two methods depends on the trade-off between model simplicity and predictive performance.
+
+
+# student’s contribution:
+
+Chu Li(1082477): step 1&2(code+descriptive interpretation), creating GitHub repository
+Denis Lebedev (4826973): step 3 (code), some cosmetic features for all sections, Shiny App (created separate sections for Lasso and BSS, fine tuning, dynamic control panel)
+Tinghui Xu (1715119):step 1&2 previous examples and revises;the interpretation for the lasso,the comparison between the 2 linear methods and the Shiny App
+Eleni Spyrou(4515919): step 3&4 (descriptive interpretation)
+# AI tools
+
+Using ChatGPT to get inspiration for analyzing ideas
