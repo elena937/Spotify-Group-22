@@ -68,7 +68,7 @@ ui <- fluidPage(
       style = "padding: 15px; background-color: #FFFFFF; border-radius: 8px; box-shadow: 0 4px 8px rgba(0,0,0,0.1); max-width: 300px;",
       conditionalPanel(
         condition = "input.tabs == 'Initial Visualization'",
-        h4("🎵 Line Plot Controls"),
+        h4("Line Plot Controls"),
         card(
           card_body(
             sliderInput("line_year_range", "Select Year Range:", 
@@ -78,7 +78,7 @@ ui <- fluidPage(
           )
         ),
         tags$hr(),
-        h4("📊 Histogram Controls"),
+        h4("Histogram Controls"),
         wellPanel(
           selectInput("hist_var", "Select variable to plot histogram:", 
                       choices = numeric_vars, selected = "Popularity"),
@@ -88,7 +88,7 @@ ui <- fluidPage(
       
       conditionalPanel(
         condition = "input.tabs == 'Correlation Heatmap'",
-        h4("🔗 Heatmap Controls"),
+        h4("Heatmap Controls"),
         wellPanel(
           checkboxGroupInput("corr_vars", "Select numeric variables:",
                              choices = numeric_vars,
@@ -105,7 +105,7 @@ ui <- fluidPage(
       
       conditionalPanel(
         condition = "input.tabs == 'Best Subset Selection' || input.tabs == 'Lasso Method'",
-        h4("⚙️ Train/Test Split Controls"),
+        h4("Train/Test Split Controls"),
         wellPanel(
           sliderInput("train_ratio", "Training Set Proportion:", min = 0.3, max = 0.8, value = 0.5, step = 0.05),
           sliderInput("test_ratio", "Testing Set Proportion:", min = 0.1, max = 0.5, value = 0.2, step = 0.05),
@@ -122,34 +122,34 @@ ui <- fluidPage(
         id = "tabs",
         
         tabPanel("Initial Visualization",
-                 div(style = "text-align:center", h3("📈 Popularity over Year")),
+                 div(style = "text-align:center", h3("Popularity over Year")),
                  plotOutput("line_plot", height = "400px", width = "100%"),
                  tags$hr(),
-                 div(style = "text-align:center", h3("📊 Histogram")),
+                 div(style = "text-align:center", h3("Histogram")),
                  plotOutput("hist_plot", height = "400px", width = "100%")
         ),
         
         tabPanel("Correlation Heatmap",
-                 div(style = "text-align:center", h3("📉 Correlation Heatmap")),
+                 div(style = "text-align:center", h3("Correlation Heatmap")),
                  plotOutput("corr_plot", height = "500px", width = "100%")
         ),
         
         tabPanel("Best Subset Selection",
-                 div(style = "text-align:center", h3("📊 Popularity Distribution by Data Split")),
+                 div(style = "text-align:center", h3("Popularity Distribution by Data Split")),
                  plotOutput("split_plot", height = "350px"),
                  p("We compare different feature selection methods in predicting Spotify song popularity.")
                  ,
                  
                  tags$hr(),
-                 h3("📉 Validation MSE by Model Size"),
+                 h3("Validation MSE by Model Size"),
                  verbatimTextOutput("model_description_text1"),
                  plotOutput("cv_mse_plot", height = "350px"),
                  verbatimTextOutput("best_model_info"),
                  tags$hr(),
-                 h3("📌 Predicted vs Actual (Test Set)"),
+                 h3("Predicted vs Actual (Test Set)"),
                  plotOutput("pred_vs_actual_plot", height = "350px"),
                  tags$hr(),
-                 h3("📋 Final Model Coefficients and T-Statistics"),
+                 h3("Final Model Coefficients and T-Statistics"),
                  textOutput("summary_text_ols"),
                  tableOutput("ols_summary"),
                  
@@ -157,17 +157,17 @@ ui <- fluidPage(
         
        
         tabPanel("Lasso Method",
-                 div(style = "text-align:center", h3("🔍 Cross-Validated Lasso Plot")),
+                 div(style = "text-align:center", h3("Cross-Validated Lasso Plot")),
                  plotOutput("cv_lasso_plot", height = "350px"),
                  verbatimTextOutput("model_description_text2"),
                  p("Compare different feature selection methods in predicting Spotify song popularity.")
                  ,
                  tags$hr(),
-                 h3("📌 Predicted vs Actual (Test Set)"),
+                 h3("Predicted vs Actual (Test Set)"),
                  plotOutput("lasso_pred_vs_actual", height = "350px"),
                  verbatimTextOutput("lasso_model_info"),
                  tags$hr(),
-                 h3("📋 Final Model Coefficients and T-Statistics"),
+                 h3("Final Model Coefficients and T-Statistics"),
                  textOutput("lasso_summary_text"),
                  tableOutput("lasso_summary"),
         ),
@@ -187,9 +187,10 @@ ui <- fluidPage(
                  [Chu Li(1082477): Discuss with team members to complete the Shiny app together,
                  part1 step1-2, code after feedback,
                  Improving the Shiny app user interface]
-                   Denis Lebedev (4826973): ,
-                   Tinghui Xu (1715119): ,
-                   Eleni Spyrou(4515919): ")
+                   Denis Lebedev (4826973):Discuss with team members to complete the Shiny app together, step 3 (code) + some cosmetic features for all sections,
+                   Tinghui Xu (1715119): Discuss with team members to complete the Shiny app together,
+                   step 1&2 previous examples and revises;the interpretation for the lasso,the comparison between the 2 linear methods and the Shiny App，
+                   Eleni Spyrou(4515919): Discuss with team members to complete the Shiny app together,step 3&4 (descriptive interpretation).")
         ),
       )
     )
