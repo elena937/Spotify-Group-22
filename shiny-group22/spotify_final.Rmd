@@ -466,7 +466,7 @@ While best subset linear regression performed slightly better in terms of test M
 Chu Li(1082477): step 1&2(code+descriptive interpretation), creating GitHub repository
 Denis Lebedev (4826973): step 3 (code), some cosmetic features for all sections, Shiny App (created separate sections for Lasso and BSS, fine tuning, dynamic control panel)
 Tinghui Xu (1715119):step 1&2 previous examples and revises;the interpretation for the lasso,the comparison between the 2 linear methods and the Shiny App
-Eleni Spyrou(4515919): step 3&4 (descriptive interpretation)
+Eleni Spyrou(4515919): step 3&4 descriptive interpretation, lasso model code
 # AI tools
 
 Using ChatGPT to get inspiration for analyzing ideas
