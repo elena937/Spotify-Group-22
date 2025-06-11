@@ -190,7 +190,7 @@ ui <- fluidPage(
                    Denis Lebedev (4826973):Discuss with team members to complete the Shiny app together, step 3 (code) + some cosmetic features for all sections,
                    Tinghui Xu (1715119): Discuss with team members to complete the Shiny app together,
                    step 1&2 previous examples and revises;the interpretation for the lasso,the comparison between the 2 linear methods and the Shiny App，
-                   Eleni Spyrou(4515919): Discuss with team members to complete the Shiny app together,step 3&4 (descriptive interpretation).")
+                   Eleni Spyrou(4515919): Discuss with team members to complete the Shiny app together,step 3&4 (descriptive interpretation), lasso model code.")
         ),
       )
     )
